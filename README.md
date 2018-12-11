@@ -1,6 +1,6 @@
 # Toy Blocks
 
-An implementation of a toy blockchain in C++. This toy example uses lines from Shakespere as input data and is designed to provide a concrete understanding of the basic ideas that make a blockchain  what it is: an unchangeable array of data (immutable database). Once data has been written to it the blockchain, it becomes very difficult to change it (Note this implementation only shows the protection that is achieved by hashing and proof-of-work, and omits hash consensus via a peer-to-peer network. This implementation was inspired by this [video](https://www.youtube.com/watch?v=SSo_EIwHSd4), and sifting through [Wikipedia](https://en.wikipedia.org/wiki/Blockchain).
+An implementation of a toy blockchain in C++. This toy example uses lines from Shakespeare as input data and is designed to provide a concrete understanding of the basic ideas that make a blockchain  what it is: an unchangeable array of data (immutable database). Once data has been written to it the blockchain, it becomes very difficult to change it (Note this implementation only shows the protection that is achieved by hashing and proof-of-work, and omits hash consensus via a peer-to-peer network. This implementation was inspired by this [video](https://www.youtube.com/watch?v=SSo_EIwHSd4), and sifting through [Wikipedia](https://en.wikipedia.org/wiki/Blockchain).
 
 ## Getting Started
 
