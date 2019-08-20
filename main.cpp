@@ -10,13 +10,13 @@ struct HashUtil
   /** Calculates a hash for a string using a dummy hash algorithm. */
   static ullint calculate_dummy_hash(const std::string& data)
   {
-    const ullint modularDivisor(10000000000);
-    ullint hash(modularDivisor);
+    const ullint primeModularDivisor(1000000000100011);
+    ullint hash(primeModularDivisor);
     for(size_t i = 2; i < data.size(); ++i)
     {
       ullint tmp =  ullint(data[i]) * ullint(data[i-1]) * ullint(data[i-2]) * ullint(i);
       hash += tmp*tmp;
-      if(hash > modularDivisor) hash %= modularDivisor;
+      if(hash > primeModularDivisor) hash %= primeModularDivisor;
     }
 
     return hash;
@@ -34,17 +34,17 @@ private:
 
   //##### PRIVATE VARIABLES #####
 private:
+  /** The data. */
+  const std::string m_data;
+
+  /** The augmentation to the data required to generate a hash with the required properties. */
+  ullint m_puzzleResult;
+
   /** The block id. */
   int m_id;
 
-  /** The data. */
-  std::string m_data;
-
   /** The hash of the previous block. */
-  ullint m_previousHash;
-
-  /** The augmentation to the data required to generate a hash with the required properties. */
-  ullint m_dataPerturbation;
+  const ullint m_previousHash;
 
   //##### CONSTRUCTORS #####
 public:
@@ -54,7 +54,7 @@ public:
   {
     ++blockCount;
     m_id = blockCount;
-    mine_hash(data);
+    m_puzzleResult = mine_hash();
   }
 
   //##### PUBLIC MEMBER FUNCTIONS #####
@@ -65,7 +65,7 @@ public:
   {
     return m_id;
   }
-  
+
   /** Gets the data in this block. */
   std::string get_data() const
   {
@@ -75,7 +75,7 @@ public:
   /** Gets the hash of this block. */
   ullint get_hash() const
   {
-    return HashUtil::calculate_dummy_hash(create_data_block(m_dataPerturbation, m_data, m_id));
+    return HashUtil::calculate_dummy_hash(create_data_block(m_puzzleResult, m_previousHash, m_data, m_id));
   }
 
   /** Gets the hash of the previous block. */
@@ -90,32 +90,34 @@ private:
   /** Mines an appropriate hash value by augmenting the data in the block,
    *  The last 5 digits of the hash should all be 9's.
    */
-  void mine_hash(const std::string& data)
+  ullint mine_hash()
   {
-    const ullint m_largeInteger(100000);
+    const ullint m_largeInteger(1000000);
     const bool verbose(true);
 
     if(verbose) std::cout << "mining blk: " << m_id;
 
-    ullint dataPerturbation(m_largeInteger);
+    ullint puzzleResult(m_largeInteger);
     ullint hash(0);
     do
     {
-      const std::string dataBlock = create_data_block(++dataPerturbation, data, m_id);
-      hash = HashUtil::calculate_dummy_hash(dataBlock);
-      if(verbose && (dataPerturbation % m_largeInteger) == 0) std::cout << '.' << std::flush;
+      hash = HashUtil::calculate_dummy_hash(create_data_block(++puzzleResult, m_previousHash, m_data, m_id));
+      if(verbose && (puzzleResult % 100000) == 0) std::cout << '.' << std::flush;
     }
     while((hash % m_largeInteger) != (m_largeInteger-1));
-
-    m_dataPerturbation = dataPerturbation;
-
     if(verbose) std::cout << '\n';
+
+    return puzzleResult;
   }
 
-  /** Creates a data block by concatenating the data perturbation term, the actual data, and the block id. */
-  std::string create_data_block(ullint dataPerturbation, const std::string& data, int blockId) const
+  /** Creates a data block by concatenating the data puzzle result, the previous bloc hash, the actual data, and the block id. */
+  std::string create_data_block(ullint puzzleResult, ullint previousHash, const std::string& data, int blockId) const
   {
-    return std::to_string(dataPerturbation) + data + std::to_string(blockId);
+    std::string dataBlock = "blockId-" + std::to_string(blockId)
+                          + "--data-\"" + data + "\""
+                          + "--previousHash-" + std::to_string(previousHash)
+                          + "--puzzleResult-" + std::to_string(puzzleResult);
+    return dataBlock;
   }
 };
 
@@ -126,7 +128,7 @@ std::ostream& operator<<(std::ostream& os, const Block& blk)
 {
   os << "-----------------------------------------\n";
   os << "prevHash: " << blk.get_previous_hash() << '\n';
-  os << "block id: "<< blk.get_id() << "\n";
+  os << "block id: " << blk.get_id() << "\n";
   os << "    data: " << blk.get_data() << '\n';
   os << "    hash: " << blk.get_hash() << '\n';
   os << "-----------------------------------------";
@@ -138,7 +140,6 @@ class BlockChain
 {
   //##### PRIVATE VARIABLES #####
 private:
-
   /** The block chain. */
   std::vector<Block> m_blockChain;
 
@@ -150,10 +151,24 @@ public:
     m_blockChain.push_back(block);
   }
 
+  //##### CONSTRUCTORS #####
+public:
+  /** Creates a new blockchain. */
+  BlockChain()
+  {
+    Block genesisBlock = Block("## GenesisBlock ##", 0);
+    add_block(genesisBlock);
+  }
+
   /** Gets a block from the chain. */
   Block get_block(int blockId)
   {
     return m_blockChain[blockId];
+  }
+
+  ullint get_latest_hash()
+  {
+    return m_blockChain.back().get_hash();
   }
 
   /** Verifies that the block chain is valid by comparing the hash values of adjacent blocks. */
@@ -196,13 +211,7 @@ int main()
 
   BlockChain blockchain;
   for(size_t i = 0; i < data.size(); ++i)
-  {
-    ullint previousHash(0);
-    if(i > 0) previousHash = blockchain.get_block(i-1).get_hash();
-
-    Block block(data[i], previousHash);
-    blockchain.add_block(block);
-  }
+    blockchain.add_block(Block(data[i], blockchain.get_latest_hash()));
 
   blockchain.verify();
 
